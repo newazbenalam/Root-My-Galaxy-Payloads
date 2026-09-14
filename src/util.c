@@ -154,8 +154,15 @@ static void put_slide_bank_entry(unsigned char *p, uintptr_t payload_base,
 
 void setup_kernelsnitch(void) {
   int cpu_count = (int)sysconf(_SC_NPROCESSORS_ONLN);
+#if defined(APP_PAYLOAD) && APP_PAYLOAD
+  /* verbose=1 on app builds: expose collision finding / bruteforce
+   * progress in logcat while diagnosing the o1q KernelSnitch leak. */
+  ks = kernelsnitch_setup(
+      MM_STRUCT_SZ, MM_ORDER, cpu_count, KSNITCH_COLLISIONS, 1, 0);
+#else
   ks = kernelsnitch_setup(
       MM_STRUCT_SZ, MM_ORDER, cpu_count, KSNITCH_COLLISIONS, 0, 0);
+#endif
 #if defined(APP_PHYS_P0_ORACLE) && APP_PHYS_P0_ORACLE
   kernelsnitch_set_profile(
       ks, SLIDE_KSNITCH_APPENDED_FUTEXES,

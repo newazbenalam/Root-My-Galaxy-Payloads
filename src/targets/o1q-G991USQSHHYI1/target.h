@@ -2,7 +2,7 @@
 #define OFFSET_H
 
 #if defined(APP_PAYLOAD) && APP_PAYLOAD
-#define BUILD_VARIANT_LABEL "g991u-G991USQSHHYI1-app"
+#define BUILD_VARIANT_LABEL "g991u-G991USQSHHYI1-app-v2-ksnitch"
 #else
 #define BUILD_VARIANT_LABEL "g991u-G991USQSHHYI1-root-umh"
 #endif
