@@ -20,7 +20,10 @@
 #define P0_KERNEL_PHYS_LOAD 0x80000000ULL
 #define SKB_DATA_DELTA (-0xe80LL)
 
-#define MM_STRUCT_SZ 0x3c0
+/* sizeof(mm_struct)=0x398 (920) — read from mm_cache_init's
+ * kmem_cache_create_usercopy("mm_struct", 0x398, ...) immediate.
+ * Do NOT copy 0x3c0 from exynos 5.4 profiles. */
+#define MM_STRUCT_SZ 0x398
 #define MM_ORDER 3
 #define KMALLOC_CGROUP_TYPE 0
 #define KMALLOC_CACHE_TYPES 2
