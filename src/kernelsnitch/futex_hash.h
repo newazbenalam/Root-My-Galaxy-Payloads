@@ -186,27 +186,23 @@ typedef union {
 
 uint32_t futex_hash_no_trunc(futex_key_t *key)
 {
-    /* Ground truth for Samsung 5.4-qgki kernels (o1q 5.4.274, inlined in
-     * futex_wake @ ffffffc0103cd190): the kernel hashes 16 bytes of the key
-     * as {both.word (uaddr), both.ptr (mm)} — address FIRST, mm SECOND —
-     * with initval = both.offset and a seed WITHOUT the jhash2 length<<2
-     * term (mov w8,#0xbeff; movk w8,#0xdead,lsl#16 → 0xdeadbeef, not
-     * 0xdeadbeff). It is NOT the generic jhash2((u32*)key, 4, offset). */
-    u32 addr_lo = (u32)(key->both.word & 0xffffffffu);
-    u32 addr_hi = (u32)((uint64_t)key->both.word >> 32);
-    u32 mm_lo = (u32)(key->both.ptr & 0xffffffffu);
-    u32 mm_hi = (u32)((uint64_t)key->both.ptr >> 32);
-    u32 seed = JHASH_INITVAL + (u32)key->both.offset;
-
-    u32 a = addr_lo + seed;
-    u32 b = addr_hi + seed;
-    u32 c = mm_lo + seed;
-
-    __jhash_mix(a, b, c);
-    a += mm_hi;
-    __jhash_final(a, b, c);
-
-    return c;
+    /* Ground truth for Samsung 5.4-qgki kernels (o1q 5.4.274):
+     *   - get_futex_key @ ffffffc0103d2710 stores the private key as
+     *     {uaddr_page_base@0, mm@8, offset=uaddr&0xfff@16} — i.e.
+     *     kernel both.word = uaddr, both.ptr = mm.
+     *   - futex_wake @ ffffffc0103cd190 inlines futex_hash as plain
+     *     jhash2 over the key's first 4 words {uaddr_lo, uaddr_hi,
+     *     mm_lo, mm_hi} with initval = offset (seed immediate
+     *     0xdeadbeff = JHASH_INITVAL + length<<2, folded by compiler).
+     * The userspace futex_key_t packs {ptr=mm@0, word=uaddr@8}, the
+     * OPPOSITE order of the kernel struct — so hash explicitly in
+     * kernel order instead of jhash2((u32*)key, 4, offset). */
+    u32 k[4];
+    k[0] = (u32)(key->both.word & 0xffffffffu);
+    k[1] = (u32)((uint64_t)key->both.word >> 32);
+    k[2] = (u32)(key->both.ptr & 0xffffffffu);
+    k[3] = (u32)((uint64_t)key->both.ptr >> 32);
+    return jhash2(k, 4, (u32)key->both.offset);
 }
 
 uint32_t __futex_hash(futex_key_t *key, uint32_t futex_hashsize)
