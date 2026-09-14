@@ -186,23 +186,20 @@ typedef union {
 
 uint32_t futex_hash_no_trunc(futex_key_t *key)
 {
-    /* Ground truth for Samsung 5.4-qgki kernels (o1q 5.4.274):
-     *   - get_futex_key @ ffffffc0103d2710 stores the private key as
-     *     {uaddr_page_base@0, mm@8, offset=uaddr&0xfff@16} — i.e.
-     *     kernel both.word = uaddr, both.ptr = mm.
-     *   - futex_wake @ ffffffc0103cd190 inlines futex_hash as plain
-     *     jhash2 over the key's first 4 words {uaddr_lo, uaddr_hi,
-     *     mm_lo, mm_hi} with initval = offset (seed immediate
+    /* Verified against o1q 5.4.274 disassembly (G991USQSHHYI1):
+     *   - get_futex_key private path (@ffffffc0103d2710, reached when
+     *     FLAGS_SHARED is clear) stores the key as
+     *     {mm@0 (current->mm, task+0x5a0), uaddr_page@8, offset@16} —
+     *     the SAME byte order as this userspace futex_key_t
+     *     {both.ptr=mm@0, both.word=uaddr@8}.
+     *   - futex_wake (@ffffffc0103cd190) inlines futex_hash as plain
+     *     jhash2 over the key's first 4 words {mm_lo, mm_hi, addr_lo,
+     *     addr_hi} with initval = both.offset (seed immediate
      *     0xdeadbeff = JHASH_INITVAL + length<<2, folded by compiler).
-     * The userspace futex_key_t packs {ptr=mm@0, word=uaddr@8}, the
-     * OPPOSITE order of the kernel struct — so hash explicitly in
-     * kernel order instead of jhash2((u32*)key, 4, offset). */
-    u32 k[4];
-    k[0] = (u32)(key->both.word & 0xffffffffu);
-    k[1] = (u32)((uint64_t)key->both.word >> 32);
-    k[2] = (u32)(key->both.ptr & 0xffffffffu);
-    k[3] = (u32)((uint64_t)key->both.ptr >> 32);
-    return jhash2(k, 4, (u32)key->both.offset);
+     * So hashing the raw key struct is correct. Do NOT reorder to
+     * {addr, mm} — the kernel key layout is {mm, addr}. */
+    return jhash2((uint32_t *)key, OFFSET_OF(typeof(*key), both.offset) / 4,
+              key->both.offset);
 }
 
 uint32_t __futex_hash(futex_key_t *key, uint32_t futex_hashsize)
