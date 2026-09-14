@@ -152,14 +152,22 @@
 #define FAKE_WAITER_DEADLINE_OFF 0x48
 #define FAKE_WAITER_LAYOUT_SIZE 0x50
 
-#define FAKE_TASK_USAGE_OFF 0x40
-#define FAKE_TASK_PRIO_OFF 0x84
-#define FAKE_TASK_NORMAL_PRIO_OFF 0x8c
-#define FAKE_TASK_TASK_GROUP_OFF 0x310
-#define FAKE_TASK_PI_LOCK_OFF 0x86c
-#define FAKE_TASK_PI_WAITERS_OFF 0x880
-#define FAKE_TASK_PI_TOP_TASK_OFF 0x890
-#define FAKE_TASK_PI_BLOCKED_ON_OFF 0x898
+/* task_struct offsets derived from o1q 5.4.274 disassembly (do NOT copy from
+ * exynos 5.4 profiles — this qgki kernel has a different task_struct):
+ * usage=0x38 (get_task_struct inline in adjust_prio_chain),
+ * on_rq=0x78, prio=0x7c, normal_prio=0x84, sched_class=0x90,
+ * dl.deadline=0x428, sched_task_group=0x3d8 (init_task reloc scan),
+ * pi_lock=0x8dc, pi_waiters.rb_root=0x8e8, pi_waiters.rb_leftmost=0x8f0,
+ * pi_top_task=0x8f8 (rt_mutex_setprio str x21,[x19,#0x8f8]),
+ * pi_blocked_on=0x900 (rt_mutex_adjust_pi + chain). */
+#define FAKE_TASK_USAGE_OFF 0x38
+#define FAKE_TASK_PRIO_OFF 0x7c
+#define FAKE_TASK_NORMAL_PRIO_OFF 0x84
+#define FAKE_TASK_TASK_GROUP_OFF 0x3d8
+#define FAKE_TASK_PI_LOCK_OFF 0x8dc
+#define FAKE_TASK_PI_WAITERS_OFF 0x8e8
+#define FAKE_TASK_PI_TOP_TASK_OFF 0x8f8
+#define FAKE_TASK_PI_BLOCKED_ON_OFF 0x900
 
 #define CFG_PAGE_OFF 0x10
 #define CFG_NEEDS_READ_FILL_OFF 0x50
