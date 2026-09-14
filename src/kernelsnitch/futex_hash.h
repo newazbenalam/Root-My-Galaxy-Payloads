@@ -186,10 +186,27 @@ typedef union {
 
 uint32_t futex_hash_no_trunc(futex_key_t *key)
 {
-    uint32_t hash = jhash2((uint32_t *)key, OFFSET_OF(typeof(*key), both.offset) / 4,
-              key->both.offset);
+    /* Ground truth for Samsung 5.4-qgki kernels (o1q 5.4.274, inlined in
+     * futex_wake @ ffffffc0103cd190): the kernel hashes 16 bytes of the key
+     * as {both.word (uaddr), both.ptr (mm)} — address FIRST, mm SECOND —
+     * with initval = both.offset and a seed WITHOUT the jhash2 length<<2
+     * term (mov w8,#0xbeff; movk w8,#0xdead,lsl#16 → 0xdeadbeef, not
+     * 0xdeadbeff). It is NOT the generic jhash2((u32*)key, 4, offset). */
+    u32 addr_lo = (u32)(key->both.word & 0xffffffffu);
+    u32 addr_hi = (u32)((uint64_t)key->both.word >> 32);
+    u32 mm_lo = (u32)(key->both.ptr & 0xffffffffu);
+    u32 mm_hi = (u32)((uint64_t)key->both.ptr >> 32);
+    u32 seed = JHASH_INITVAL + (u32)key->both.offset;
 
-    return hash;
+    u32 a = addr_lo + seed;
+    u32 b = addr_hi + seed;
+    u32 c = mm_lo + seed;
+
+    __jhash_mix(a, b, c);
+    a += mm_hi;
+    __jhash_final(a, b, c);
+
+    return c;
 }
 
 uint32_t __futex_hash(futex_key_t *key, uint32_t futex_hashsize)
